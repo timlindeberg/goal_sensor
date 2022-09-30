@@ -1,0 +1,17 @@
+{
+  "domain": "goal_sensor",
+  "name": "Goal Sensor",
+  "config_flow": false,
+  "documentation": "https://www.home-assistant.io/integrations/goal_sensor",
+  "requirements": [
+    "numpy==1.23.2",
+    "pytesseract==0.3.10",
+    "opencv-contrib-python==4.6.0.66"
+  ],
+  "ssdp": [],
+  "zeroconf": [],
+  "homekit": {},
+  "dependencies": [],
+  "codeowners": ["@timlindeberg"],
+  "iot_class": "local_polling"
+}
