@@ -1,0 +1,5 @@
+{
+    "name": "Goal sensor",
+    "domains": ["sensor"],
+    "render_readme": true
+}
