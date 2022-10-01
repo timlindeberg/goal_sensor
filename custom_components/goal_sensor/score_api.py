@@ -47,17 +47,8 @@ class ScoreApi:
 
         _LOGGER.debug("Response: %s", response)
 
-        if "timestamp" not in response:
-            _LOGGER.error("Invalid json response, missing 'timestamp' field")
-            return {}
-
         if "image" not in response:
             _LOGGER.error("Invalid json response, missing 'image' field")
-            return {}
-
-        timestamp = datetime.utcfromtimestamp(response["timestamp"] / 1000)
-        if (datetime.today() - timestamp).seconds >= 5:
-            _LOGGER.debug("Image is older than 5 seconds, skipping")
             return {}
 
         image_text = response["image"]
