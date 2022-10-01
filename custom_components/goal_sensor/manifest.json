@@ -3,11 +3,7 @@
   "name": "Goal Sensor",
   "config_flow": false,
   "documentation": "https://www.home-assistant.io/integrations/goal_sensor",
-  "requirements": [
-    "numpy==1.23.2",
-    "pytesseract==0.3.10",
-    "Pillow==9.2.0"
-  ],
+  "requirements": [],
   "ssdp": [],
   "zeroconf": [],
   "homekit": {},

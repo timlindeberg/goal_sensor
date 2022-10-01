@@ -3,14 +3,14 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 import logging
-
+import requests
 import voluptuous as vol
 
 from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.core import HomeAssistant
-import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+import homeassistant.helpers.config_validation as cv
 
 from .const import (
     ACTIVE,
@@ -20,13 +20,12 @@ from .const import (
     IDLE_TIME,
     SCORE_RESET_TIME,
     TEAM,
-    URL,
+    SCORE_URL,
 )
-from .score_api import ScoreApi
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
-        vol.Required(URL): cv.string,
+        vol.Required(SCORE_URL): cv.string,
         vol.Required(TEAM): cv.string,
         vol.Optional(IDLE_TIME): cv.positive_int,
         vol.Optional(IDLE_SCAN_INTERVAL): cv.positive_int,
@@ -46,7 +45,7 @@ def setup_platform(
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Goal Sensor platform."""
-    url = config[URL]
+    score_url = config[SCORE_URL]
     team = config[TEAM].lower()
 
     idle_time = config.get(IDLE_TIME, 1200)  # 20 minutes
@@ -54,7 +53,8 @@ def setup_platform(
     score_reset = config.get(SCORE_RESET_TIME, 10)
 
     sensor = GoalSensor(
-        ScoreApi(url, SCAN_INTERVAL.total_seconds()),
+        score_url,
+        SCAN_INTERVAL.total_seconds(),
         team,
         idle_time,
         idle_scan_interval,
@@ -71,7 +71,8 @@ class GoalSensor(SensorEntity):
 
     def __init__(
         self,
-        api: ScoreApi,
+        score_url: str,
+        timeout: float,
         team: str,
         idle_time: int,
         idle_scan_interval: int,
@@ -79,7 +80,8 @@ class GoalSensor(SensorEntity):
     ) -> None:
         """init."""
         super().__init__()
-        self._api = api
+        self._score_url = score_url
+        self._timeout = timeout
         self._team = team
         self._idle_time = idle_time
         self._idle_scan_interval = idle_scan_interval
@@ -123,7 +125,7 @@ class GoalSensor(SensorEntity):
         if state is IDLE and time_since_update <= self._idle_scan_interval:
             return
 
-        score = self._api.fetch_scores()
+        score = self._fetch_scores()
         _LOGGER.debug("Fetched score: '%s'", score)
         self._last_update = now
 
@@ -142,3 +144,25 @@ class GoalSensor(SensorEntity):
             self._attr_native_value = GOAL
 
         self._current_score = team_score
+
+    def _fetch_scores(self) -> dict:
+        try:
+            response = requests.get(self._score_url, timeout=self._timeout).json()
+        except requests.exceptions.MissingSchema:
+            _LOGGER.error(
+                "Missing resource or schema in configuration. Add http:// to your URL"
+            )
+            return {}
+        except requests.exceptions.ConnectionError:
+            _LOGGER.error("Connection timed out")
+            return {}
+
+        _LOGGER.debug("Response: %s", response)
+
+        if "scores" not in response:
+            _LOGGER.error("Invalid json response, missing 'scores' field")
+            return {}
+
+        return response["scores"]
+
+

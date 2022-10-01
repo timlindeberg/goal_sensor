@@ -1,7 +1,7 @@
 """Constants for the Score Sensor integration."""
 
 # Config values
-URL = "url"
+SCORE_URL = "score_url"
 TEAM = "team"
 IDLE_TIME = "idle_time"
 IDLE_SCAN_INTERVAL = "idle_scan_interval"
