@@ -10,8 +10,7 @@ import pytesseract
 import requests
 import sys
 import io
-
-from PIL import Image, ImageEnhance, ImageMath
+import cv2
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,6 +23,7 @@ class ScoreApi:
         self._url = url
         self._timeout = timeout_seconds
         self._body = '{ "command":"cropped-image" }'
+        self._mask = np.zeros(0)
         self._score = 0
         self._previous_image = ""
         self._previous_score: dict = {}
@@ -79,25 +79,27 @@ class ScoreApi:
         return score
 
     def _process_image(self, image_data):
-        stream_str = io.BytesIO(image_data)
-        with Image.open(stream_str) as img:
-            # Turn black and white
-            img = img.convert('L')
+        nparr = np.frombuffer(image_data, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-            height = img.height
-            width = img.width
+        height = img.shape[0]
+        width = img.shape[1]
 
-            # Invert the middle of the image
-            start = int(0.31 * width)
-            end = int(0.71 * width)
-            img_array = np.array(img)
-            img_slice = img_array[:, start:end] 
-            img_array[:, start:end] = 255 - img_slice
-            img = Image.fromarray(img_array)
-            
-            # Scale up
-            scale = 4
-            return img.resize((int(width * scale), int(height * scale)), Image.Resampling.BICUBIC)
+        if len(self._mask) != height or len(self._mask[0]) != width:
+            self._mask = np.zeros((height, width, 1), np.uint8)
+            self._mask[:, 0 : int(0.31 * width)] = 255
+            self._mask[:, int(0.71 * width) : width] = 255
+
+        # Black and white
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        # Invert edges of the image (part that has the team names, the middle already has the correct colors)
+        img = cv2.bitwise_not(img, img, mask=self._mask)
+
+        # Scale up
+        scale = 4.0  # percent of original size
+        dim = (int(img.shape[1] * scale), int(img.shape[0] * scale))
+        return cv2.resize(img, dim, interpolation=cv2.INTER_CUBIC)
 
     def _read_text(self, img):
         text = pytesseract.image_to_string(img)
