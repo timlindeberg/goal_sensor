@@ -2,14 +2,16 @@
 from __future__ import annotations
 
 import base64
-from datetime import datetime
 import logging
 import re
 
-import cv2
 import numpy as np
 import pytesseract
 import requests
+import sys
+import io
+
+from PIL import Image, ImageEnhance, ImageMath
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,7 +25,6 @@ class ScoreApi:
         self._timeout = timeout_seconds
         self._body = '{ "command":"cropped-image" }'
         self._score = 0
-        self._mask = np.zeros(0)
         self._previous_image = ""
         self._previous_score: dict = {}
         self._score_regex = r"([A-Za-z]+).+?([0-9oOQ])-([0-9oOQ]).+?([A-Za-z]+)"
@@ -66,12 +67,14 @@ class ScoreApi:
 
         self._previous_image = image_text
 
-        score = self._get_score(image_text)
+        image_data = base64.b64decode(image_text)
+
+        score = self._get_score(image_data)
         self._previous_score = score
         return score
 
-    def _get_score(self, image_text):
-        image = self._to_image(image_text)
+    def _get_score(self, image_data):
+        image = self._process_image(image_data)
         text = self._read_text(image)
         _LOGGER.debug("Got text from image: '%s'", text)
 
@@ -84,35 +87,30 @@ class ScoreApi:
             return {}
         return score
 
-    def _to_image(self, image_b64):
-        image_data = base64.b64decode(image_b64)
-        nparr = np.frombuffer(image_data, np.uint8)
-        return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    def _process_image(self, image_data):
+        stream_str = io.BytesIO(image_data)
+        with Image.open(stream_str) as img:
+            # Turn black and white
+            img = img.convert('L')
+
+            height = img.height
+            width = img.width
+
+            # Invert the middle of the image
+            start = int(0.31 * width)
+            end = int(0.71 * width)
+            img_array = np.array(img)
+            img_slice = img_array[:, start:end] 
+            img_array[:, start:end] = 255 - img_slice
+            img = Image.fromarray(img_array)
+            
+            # Scale up
+            scale = 4
+            return img.resize((int(width * scale), int(height * scale)), Image.Resampling.BICUBIC)
 
     def _read_text(self, img):
-        height = img.shape[0]
-        width = img.shape[1]
-
-        if len(self._mask) != height or len(self._mask[0]) != width:
-            self._mask = np.zeros((height, width, 1), np.uint8)
-            self._mask[:, 0 : int(0.31 * width)] = 255
-            self._mask[:, int(0.71 * width) : width] = 255
-
-        # Black and white
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-        # Invert edges of the image (part that has the team names, the middle already has the correct colors)
-        img = cv2.bitwise_not(img, img, mask=self._mask)
-
-        # Scale up
-        scale_percent = 400  # percent of original size
-        width = int(img.shape[1] * scale_percent / 100)
-        height = int(img.shape[0] * scale_percent / 100)
-        dim = (width, height)
-
-        img = cv2.resize(img, dim, interpolation=cv2.INTER_CUBIC)
         text = pytesseract.image_to_string(img)
-        return text.replace("\n", " ")
+        return text.replace("+", "").replace("#", "").replace("\n", " ")
 
     def _parse_score(self, text):
         def get_score(text):
