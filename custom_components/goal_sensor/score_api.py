@@ -122,3 +122,16 @@ class ScoreApi:
         team2 = match[4].lower()
 
         return {team1: score1, team2: score2}
+
+if __name__ == '__main__':
+    url = sys.argv[1]
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    ch.setFormatter(formatter)
+    _LOGGER.addHandler(ch)
+    _LOGGER.setLevel(logging.DEBUG)
+    
+    api = ScoreApi(url, 5)
+    scores = api.fetch_scores()
+    print(f"Scores: {scores}")
