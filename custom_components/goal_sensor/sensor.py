@@ -13,14 +13,18 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 import homeassistant.helpers.config_validation as cv
 
 from .const import (
+    # States
     ACTIVE,
     GOAL,
     IDLE,
-    IDLE_SCAN_INTERVAL,
-    IDLE_TIME,
-    SCORE_RESET_TIME,
-    TEAM,
+    BACK_OFF,
+    # Config Values
     SCORE_URL,
+    TEAM,
+    IDLE_TIME,
+    IDLE_SCAN_INTERVAL,
+    SCORE_RESET_TIME,
+    SCORE_REQUEST_TIMEOUT,
 )
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
@@ -30,12 +34,14 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(IDLE_TIME): cv.positive_int,
         vol.Optional(IDLE_SCAN_INTERVAL): cv.positive_int,
         vol.Optional(SCORE_RESET_TIME): cv.positive_int,
+        vol.Optional(SCORE_REQUEST_TIMEOUT): cv.positive_float,
     }
 )
 
 SCAN_INTERVAL = timedelta(seconds=1)
 
 _LOGGER = logging.getLogger(__name__)
+
 
 MAX_BACKOFF = 128
 
@@ -53,10 +59,11 @@ def setup_platform(
     idle_time = config.get(IDLE_TIME, 1200)  # 20 minutes
     idle_scan_interval = config.get(IDLE_SCAN_INTERVAL, 10)
     score_reset = config.get(SCORE_RESET_TIME, 10)
+    score_request_timeout = config.get(SCORE_REQUEST_TIMEOUT, 0.5)
 
     sensor = GoalSensor(
         score_url,
-        SCAN_INTERVAL.total_seconds(),
+        score_request_timeout,
         team,
         idle_time,
         idle_scan_interval,
@@ -69,12 +76,11 @@ class GoalSensor(SensorEntity):
     """A Goal Sensor entity."""
 
     _attr_name = "Goal"
-    _attr_native_value = IDLE
 
     def __init__(
         self,
         score_url: str,
-        timeout: float,
+        score_request_timeout: float,
         team: str,
         idle_time: int,
         idle_scan_interval: int,
@@ -82,8 +88,12 @@ class GoalSensor(SensorEntity):
     ) -> None:
         """init."""
         super().__init__()
+
+        self._attr_name = "Goal"
+        self._attr_native_value = IDLE
+
         self._score_url = score_url
-        self._timeout = timeout
+        self._score_request_timeout = score_request_timeout
         self._team = team
         self._idle_time = idle_time
         self._idle_scan_interval = idle_scan_interval
@@ -93,21 +103,24 @@ class GoalSensor(SensorEntity):
         self._last_update = datetime.min
         self._last_score = datetime.min
         self._back_off = 1
-        self._current_back_off = 0
+        self._back_off_time = datetime.min
 
     def update(self) -> None:
         """Update the Goal Sensor entity."""
-        if self._current_back_off > 0:
-            _LOGGER.debug("Backing off: %s", self._current_back_off)
-            self._current_back_off -= 1
-            return
         state = self._attr_native_value
+        now = datetime.today()
+
+        if state == BACK_OFF and self._back_off_time >= now:
+            return
+
+        if state == BACK_OFF:
+            # End of back off, set state to IDLE
+            self._attr_native_value = IDLE
+
         if state == GOAL:
             _LOGGER.debug("Clearing goal state")
             self._attr_native_value = ACTIVE
             return
-
-        now = datetime.today()
 
         # If we haven't gotten a score in some time (default 20 minutes) set
         # the state back to idle to increase time between polling
@@ -137,7 +150,6 @@ class GoalSensor(SensorEntity):
         if not score:
             return
 
-        self._back_off = 1
         self._last_update = now
         _LOGGER.debug("Fetched score: '%s'", score)
 
@@ -151,7 +163,7 @@ class GoalSensor(SensorEntity):
         self._attr_native_value = ACTIVE
 
         # Scored a goal!
-        if self._current_score != None and team_score == self._current_score + 1:
+        if self._current_score is not None and team_score == self._current_score + 1:
             _LOGGER.debug("Goal!")
             self._attr_native_value = GOAL
 
@@ -159,19 +171,24 @@ class GoalSensor(SensorEntity):
 
     def _fetch_score(self) -> dict:
         try:
-            response = requests.get(self._score_url, timeout=self._timeout).json()
-        except requests.exceptions.ConnectionError:
+            response = requests.get(
+                self._score_url, timeout=self._score_request_timeout
+            ).json()
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+            self._attr_native_value = BACK_OFF
             self._back_off = min(self._back_off * 2, MAX_BACKOFF)
-            self._current_back_off = self._back_off
-            _LOGGER.error(
-                "Connection timed out, backing off for %s attempts", self._back_off
+            self._back_off_time = datetime.today() + timedelta(seconds=self._back_off)
+            _LOGGER.warning(
+                "Connection timed out, backing off for %s seconds until %s",
+                self._back_off,
+                self._back_off_time,
             )
             return None
 
         _LOGGER.debug("Response: %s", response)
 
         if "score" not in response:
-            _LOGGER.error("Invalid json response, missing 'score:' field")
+            _LOGGER.error("Invalid json response, missing 'score' field")
             return None
 
         return response["score"]
