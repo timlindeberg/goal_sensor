@@ -12,7 +12,7 @@ def main(image_url, port):
 
 	@app.route("/", methods=['GET'])
 	def index():
-		return { "score:": api.fetch_scores() }
+		return { "score": api.fetch_scores() }
 
 	waitress.serve(app, host="0.0.0.0", port=port)
 
