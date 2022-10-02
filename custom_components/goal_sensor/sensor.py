@@ -37,6 +37,8 @@ SCAN_INTERVAL = timedelta(seconds=1)
 
 _LOGGER = logging.getLogger(__name__)
 
+MAX_BACKOFF = 128
+
 
 def setup_platform(
     hass: HomeAssistant,
@@ -90,10 +92,15 @@ class GoalSensor(SensorEntity):
         self._current_score = None
         self._last_update = datetime.min
         self._last_score = datetime.min
+        self._back_off = 1
+        self._current_back_off = 0
 
     def update(self) -> None:
         """Update the Goal Sensor entity."""
-
+        if self._current_back_off > 0:
+            _LOGGER.debug("Backing off: %s", self._current_back_off)
+            self._current_back_off -= 1
+            return
         state = self._attr_native_value
         if state == GOAL:
             _LOGGER.debug("Clearing goal state")
@@ -125,9 +132,14 @@ class GoalSensor(SensorEntity):
         if state is IDLE and time_since_update <= self._idle_scan_interval:
             return
 
-        score = self._fetch_scores()
-        _LOGGER.debug("Fetched score: '%s'", score)
+        score = self._fetch_score()
+
+        if not score:
+            return
+
+        self._back_off = 1
         self._last_update = now
+        _LOGGER.debug("Fetched score: '%s'", score)
 
         team_score = score.get(self._team, None)
         if team_score is None:
@@ -139,30 +151,27 @@ class GoalSensor(SensorEntity):
         self._attr_native_value = ACTIVE
 
         # Scored a goal!
-        if self._current_score is not None and team_score == self._current_score + 1:
+        if self._current_score != None and team_score == self._current_score + 1:
             _LOGGER.debug("Goal!")
             self._attr_native_value = GOAL
 
         self._current_score = team_score
 
-    def _fetch_scores(self) -> dict:
+    def _fetch_score(self) -> dict:
         try:
             response = requests.get(self._score_url, timeout=self._timeout).json()
-        except requests.exceptions.MissingSchema:
-            _LOGGER.error(
-                "Missing resource or schema in configuration. Add http:// to your URL"
-            )
-            return {}
         except requests.exceptions.ConnectionError:
-            _LOGGER.error("Connection timed out")
-            return {}
+            self._back_off = min(self._back_off * 2, MAX_BACKOFF)
+            self._current_back_off = self._back_off
+            _LOGGER.error(
+                "Connection timed out, backing off for %s attempts", self._back_off
+            )
+            return None
 
         _LOGGER.debug("Response: %s", response)
 
-        if "scores" not in response:
-            _LOGGER.error("Invalid json response, missing 'scores' field")
-            return {}
+        if "score" not in response:
+            _LOGGER.error("Invalid json response, missing 'score:' field")
+            return None
 
-        return response["scores"]
-
-
+        return response["score"]
