@@ -147,8 +147,7 @@ class GoalSensor(SensorEntity):
             return
 
         score = self._fetch_score()
-
-        if not score:
+        if score is None:
             return
 
         self._last_update = now
