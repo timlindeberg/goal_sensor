@@ -89,6 +89,7 @@ class GoalSensor(SensorEntity):
         """init."""
         super().__init__()
 
+        self._attr_has_entity_name = True
         self._attr_name = "Goal"
         self._attr_native_value = IDLE
 
@@ -168,6 +169,14 @@ class GoalSensor(SensorEntity):
             self._attr_native_value = GOAL
 
         self._current_score = team_score
+
+    @property
+    def extra_state_attributes(self) -> dict[str, str]:
+        """Return the state attributes."""
+        return {
+            "back_off": self._back_off,
+            "score": self._current_score,
+        }
 
     def _fetch_score(self) -> dict:
         try:
