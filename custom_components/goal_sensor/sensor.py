@@ -139,11 +139,11 @@ class GoalSensor(SensorEntity):
             return
 
         score = self._fetch_score()
+        _LOGGER.debug("Fetched score: '%s'", score)
         if score is None:
             return
 
         self._last_update = now
-        _LOGGER.debug("Fetched score: '%s'", score)
 
         team_score = score.get(self._team, None)
         if team_score is None:
@@ -184,8 +184,6 @@ class GoalSensor(SensorEntity):
                 self._back_off_time,
             )
             return None
-
-        _LOGGER.debug("Response: %s", response)
 
         if "score" not in response:
             _LOGGER.error("Invalid json response, missing 'score' field")
