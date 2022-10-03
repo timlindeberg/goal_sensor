@@ -3,7 +3,7 @@
 # Config values
 SCORE_URL = "score_url"
 TEAM = "team"
-IDLE_TIME = "idle_time"
+TIME_UNTIL_IDLE = "time_until_idle"
 IDLE_SCAN_INTERVAL = "idle_scan_interval"
 SCORE_RESET_TIME = "score_reset_time"
 SCORE_REQUEST_TIMEOUT = "score_request_timeout"

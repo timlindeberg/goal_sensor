@@ -21,7 +21,7 @@ from .const import (
     # Config Values
     SCORE_URL,
     TEAM,
-    IDLE_TIME,
+    TIME_UNTIL_IDLE,
     IDLE_SCAN_INTERVAL,
     SCORE_RESET_TIME,
     SCORE_REQUEST_TIMEOUT,
@@ -31,7 +31,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(SCORE_URL): cv.string,
         vol.Required(TEAM): cv.string,
-        vol.Optional(IDLE_TIME): cv.positive_int,
+        vol.Optional(TIME_UNTIL_IDLE): cv.positive_int,
         vol.Optional(IDLE_SCAN_INTERVAL): cv.positive_int,
         vol.Optional(SCORE_RESET_TIME): cv.positive_int,
         vol.Optional(SCORE_REQUEST_TIMEOUT): cv.positive_float,
@@ -53,21 +53,13 @@ def setup_platform(
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Goal Sensor platform."""
-    score_url = config[SCORE_URL]
-    team = config[TEAM].lower()
-
-    idle_time = config.get(IDLE_TIME, 1200)  # 20 minutes
-    idle_scan_interval = config.get(IDLE_SCAN_INTERVAL, 10)
-    score_reset = config.get(SCORE_RESET_TIME, 10)
-    score_request_timeout = config.get(SCORE_REQUEST_TIMEOUT, 0.5)
-
     sensor = GoalSensor(
-        score_url,
-        score_request_timeout,
-        team,
-        idle_time,
-        idle_scan_interval,
-        score_reset,
+        score_url=config[SCORE_URL],
+        score_request_timeout=config.get(SCORE_REQUEST_TIMEOUT, 0.5),
+        team=config[TEAM].lower(),
+        time_until_idle=config.get(TIME_UNTIL_IDLE, 1200),
+        idle_scan_interval=config.get(IDLE_SCAN_INTERVAL, 10),
+        score_reset=config.get(SCORE_RESET_TIME, 10),
     )
     add_entities([sensor], True)
 
@@ -82,7 +74,7 @@ class GoalSensor(SensorEntity):
         score_url: str,
         score_request_timeout: float,
         team: str,
-        idle_time: int,
+        time_until_idle: int,
         idle_scan_interval: int,
         score_reset: int,
     ) -> None:
@@ -96,7 +88,7 @@ class GoalSensor(SensorEntity):
         self._score_url = score_url
         self._score_request_timeout = score_request_timeout
         self._team = team
-        self._idle_time = idle_time
+        self._time_until_idle = time_until_idle
         self._idle_scan_interval = idle_scan_interval
         self._score_reset = score_reset
 
@@ -125,7 +117,7 @@ class GoalSensor(SensorEntity):
 
         # If we haven't gotten a score in some time (default 20 minutes) set
         # the state back to idle to increase time between polling
-        if state is ACTIVE and (now - self._last_score).seconds > self._idle_time:
+        if state is ACTIVE and (now - self._last_score).seconds > self._time_until_idle:
             _LOGGER.debug("Going back to idle")
             self._attr_native_value = IDLE
             return
