@@ -143,6 +143,7 @@ class GoalSensor(SensorEntity):
         if score is None:
             return
 
+        self._back_off = 1
         self._last_update = now
 
         team_score = score.get(self._team, None)
