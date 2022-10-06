@@ -68,7 +68,8 @@ class GoalSensor(SensorEntity):
     """A Goal Sensor entity."""
 
     _attr_name = "Goal"
-
+    _attr_unique_id = "goal_sensor"
+    
     def __init__(
         self,
         score_url: str,
