@@ -69,7 +69,7 @@ class GoalSensor(SensorEntity):
 
     _attr_name = "Goal"
     _attr_unique_id = "goal_sensor"
-    
+
     def __init__(
         self,
         score_url: str,
@@ -171,24 +171,36 @@ class GoalSensor(SensorEntity):
             "score": self._current_score,
         }
 
+    def _increase_back_off(self) -> None:
+        self._attr_native_value = BACK_OFF
+        self._back_off = min(self._back_off * 2, MAX_BACKOFF)
+        self._back_off_time = datetime.today() + timedelta(seconds=self._back_off)
+        _LOGGER.warning(
+            "Failed to fetch score, backing off for %s seconds until %s",
+            self._back_off,
+            self._back_off_time,
+        )
+
     def _fetch_score(self) -> dict:
         try:
             response = requests.get(
                 self._score_url, timeout=self._score_request_timeout
-            ).json()
+            )
         except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
-            self._attr_native_value = BACK_OFF
-            self._back_off = min(self._back_off * 2, MAX_BACKOFF)
-            self._back_off_time = datetime.today() + timedelta(seconds=self._back_off)
-            _LOGGER.warning(
-                "Connection timed out, backing off for %s seconds until %s",
-                self._back_off,
-                self._back_off_time,
+            self._increase_back_off()
+            return None
+
+        try:
+            response_json = response.json()
+        except requests.exceptions.JSONDecodeError:
+            self._increase_back_off()
+            _LOGGER.warning("Did not get a json response: %s", response.content)
+            return None
+
+        if "score" not in response_json:
+            _LOGGER.error(
+                "Invalid json response, missing 'score' field: %s", response_json
             )
             return None
 
-        if "score" not in response:
-            _LOGGER.error("Invalid json response, missing 'score' field")
-            return None
-
-        return response["score"]
+        return response_json["score"]
