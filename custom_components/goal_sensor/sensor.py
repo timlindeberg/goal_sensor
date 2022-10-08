@@ -10,10 +10,11 @@ from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
-import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers import config_validation as cv, entity_platform
 
 from .const import (
     # States
+    DISABLED,
     ACTIVE,
     GOAL,
     IDLE,
@@ -46,13 +47,18 @@ _LOGGER = logging.getLogger(__name__)
 MAX_BACKOFF = 128
 
 
-def setup_platform(
+async def async_setup_platform(
     hass: HomeAssistant,
     config: ConfigType,
-    add_entities: AddEntitiesCallback,
+    async_add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up the Goal Sensor platform."""
+
+    platform = entity_platform.async_get_current_platform()
+    platform.async_register_entity_service("enable", {}, "enable")
+    platform.async_register_entity_service("disable", {}, "disable")
+
     sensor = GoalSensor(
         score_url=config[SCORE_URL],
         score_request_timeout=config.get(SCORE_REQUEST_TIMEOUT, 0.5),
@@ -61,7 +67,7 @@ def setup_platform(
         idle_scan_interval=config.get(IDLE_SCAN_INTERVAL, 10),
         score_reset=config.get(SCORE_RESET_TIME, 10),
     )
-    add_entities([sensor], True)
+    async_add_entities([sensor], True)
 
 
 class GoalSensor(SensorEntity):
@@ -102,6 +108,10 @@ class GoalSensor(SensorEntity):
     def update(self) -> None:
         """Update the Goal Sensor entity."""
         state = self._attr_native_value
+
+        if state == DISABLED:
+            return
+
         now = datetime.today()
 
         if state == BACK_OFF and self._back_off_time >= now:
@@ -171,6 +181,21 @@ class GoalSensor(SensorEntity):
             "score": self._current_score,
         }
 
+    def enable(self) -> None:
+        """Enable sensor."""
+        _LOGGER.info("Enabling sensor")
+        self._attr_native_value = IDLE
+        self._current_score = None
+        self._last_update = datetime.min
+        self._last_score = datetime.min
+        self._back_off = 1
+        self._back_off_time = datetime.min
+
+    def disable(self) -> None:
+        """Disable sensor."""
+        _LOGGER.info("Disabling sensor")
+        self._attr_native_value = DISABLED
+
     def _increase_back_off(self) -> None:
         self._attr_native_value = BACK_OFF
         self._back_off = min(self._back_off * 2, MAX_BACKOFF)
@@ -198,6 +223,7 @@ class GoalSensor(SensorEntity):
             return None
 
         if "score" not in response_json:
+            self._increase_back_off()
             _LOGGER.error(
                 "Invalid json response, missing 'score' field: %s", response_json
             )

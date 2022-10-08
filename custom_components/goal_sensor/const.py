@@ -9,7 +9,12 @@ SCORE_RESET_TIME = "score_reset_time"
 SCORE_REQUEST_TIMEOUT = "score_request_timeout"
 
 # States
+DISABLED = "disabled"
 IDLE = "idle"
 ACTIVE = "active"
 BACK_OFF = "back_off"
 GOAL = "goal"
+
+# Service calls
+ENABLE = "enable"
+DISABLE = "disable"
