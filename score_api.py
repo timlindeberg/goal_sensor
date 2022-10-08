@@ -29,8 +29,8 @@ class ScoreApi:
         self._previous_score: dict = {}
         self._score_regex = r"([A-Za-z]+).+?([0-9oOQ])-([0-9oOQ]).+?([A-Za-z]+)"
 
-    def fetch_scores(self) -> dict:
-        """Fetch scores."""
+    def fetch_score(self) -> dict:
+        """Fetch score."""
 
         try:
             response = requests.post(
@@ -70,7 +70,6 @@ class ScoreApi:
         _LOGGER.debug("Got text from image: '%s'", text)
 
         if len(text) == 0:
-            _LOGGER.debug("Skipping image")
             return {}
 
         score = self._parse_score(text)
