@@ -1,0 +1,11 @@
+enable:
+  # Service name as shown in UI
+  name: Enable
+  # Description of the service
+  description: Enables the sensor
+
+disable:
+  # Service name as shown in UI
+  name: Disable
+  # Description of the service
+  description: Disables the sensor
