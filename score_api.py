@@ -134,5 +134,5 @@ if __name__ == '__main__':
     _LOGGER.setLevel(logging.DEBUG)
     
     api = ScoreApi(url, 5)
-    scores = api.fetch_scores()
+    scores = api.fetch_score()
     print(f"Scores: {scores}")
