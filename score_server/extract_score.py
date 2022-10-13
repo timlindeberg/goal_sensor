@@ -34,8 +34,6 @@ class ScoreExtractor:
     def _get_images(self, image_data):
         nparr = np.frombuffer(image_data, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        height = img.shape[0]
-        width = img.shape[1]
 
         self._save_image(img, "initial")
 
@@ -43,14 +41,12 @@ class ScoreExtractor:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         self._save_image(img, "black_white")
 
-        # Split image into three parts containing the left team name, the score and the right team name
-        img_left = img[:, 0:int(0.25*width)]
-        
-        # Invert the middle image to make it black text on white background
-        img_middle = img[:, int(0.35*width):int(0.65*width)]
-        img_middle = cv2.bitwise_not(img_middle)
+        width = img.shape[1]
 
-        img_right = img[:, int(0.77*width):width]
+        # Split image into three parts containing the left team name, the score and the right team name
+        img_left = img[:, 0 : int(0.25 * width)]
+        img_middle = img[:, int(0.35 * width) : int(0.65 * width)]
+        img_right = img[:, int(0.77 * width) : width]
 
         self._save_image(img_left, "left")
         self._save_image(img_middle, "middle")
