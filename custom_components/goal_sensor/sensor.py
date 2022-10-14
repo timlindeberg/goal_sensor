@@ -100,7 +100,7 @@ class GoalSensor(SensorEntity):
         self._score_reset = score_reset
         self._max_backoff = max_backoff
 
-        self._current_score = None
+        self._current_score = 0
         self._now = datetime.min
         self._last_update = datetime.min
         self._last_score = datetime.min
@@ -119,7 +119,7 @@ class GoalSensor(SensorEntity):
         """Enable sensor."""
         _LOGGER.info("Enabling sensor")
         self._attr_native_value = IDLE
-        self._current_score = None
+        self._current_score = 0
         self._last_update = datetime.min
         self._last_score = datetime.min
         self._back_off_time = datetime.min
@@ -160,11 +160,11 @@ class GoalSensor(SensorEntity):
 
         # Reset the current score after the game is over (default 30 minutes)
         if (
-            self._current_score is not None
+            self._current_score > 0
             and self._time_since(self._last_score) >= self._score_reset
         ):
             _LOGGER.debug("Clearing score")
-            self._current_score = None
+            self._current_score = 0
             return
 
         team_score = self._fetch_team_score()
@@ -173,7 +173,7 @@ class GoalSensor(SensorEntity):
 
         # Enter ACTIVE state when we first get a score or we're back at the
         # same or a higher score than we've previously seen
-        if self._current_score is None or team_score >= self._current_score:
+        if team_score >= self._current_score:
             _LOGGER.debug("Entering ACTIVE state")
             self._current_score = team_score
             self._attr_native_value = ACTIVE
