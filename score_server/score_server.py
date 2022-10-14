@@ -18,28 +18,32 @@ def parse_args():
 	parser = argparse.ArgumentParser(description='Run the score server')
 	parser.add_argument('--url', type=str, help='The url where the image should be fetched')
 	parser.add_argument('--port', type=int, help='The port to run the server at')
-	parser.add_argument('--loglevel', choices=['debug', 'info', 'warning', 'error'], type=str, default='info', help='The log level')
+	parser.add_argument('--log_level', choices=['debug', 'info', 'warning', 'error'], type=str, default='info', help='The log level')
+	parser.add_argument('--tesseract_path', type=str, default=None, help='Path to the tesseract executable')
 
 	return parser.parse_args()
 
 def get_log_level(log_level):
-	if loglevel == 'debug':
+	if log_level == 'debug':
 		return logging.DEBUG
-	if loglevel == 'info':
+	if log_level == 'info':
 		return logging.INFO
-	if loglevel == 'warning':
+	if log_level == 'warning':
 		return logging.WARNING
 	return logging.ERROR
 
 def setup_logging(log_level):
-	Path("./logs").mkdir(exist_ok=True)
+	script_dir = Path(__file__).resolve().parent
+	log_dir = script_dir / "logs"
+	log_dir.mkdir(exist_ok=True)
 
 	logger = logging.getLogger()
 
 	formatter = logging.Formatter('%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s')
 	formatter.converter = time.gmtime  # if you want UTC time
 
-	rotating_handler = logging.handlers.RotatingFileHandler('logs/score_server.log', maxBytes=32_000_00, backupCount=3)
+	log_file = log_dir / "score_server.log"
+	rotating_handler = logging.handlers.RotatingFileHandler(log_file, maxBytes=32_000_00, backupCount=3)
 	rotating_handler.setFormatter(formatter)
 	logger.addHandler(rotating_handler)
 
@@ -49,9 +53,15 @@ def setup_logging(log_level):
 
 	logger.setLevel(log_level)
 
-def run_server(image_url, port):
+def run_server(image_url, port, tesseract_path):
+	_LOGGER.info("tesseract_path: %s", tesseract_path)
+
 	app = Flask(__name__)
-	api = ScoreApi(image_url, 2)
+	api = ScoreApi(
+		url=image_url,
+		timeout_seconds=2, 
+		save_images=False, 
+		tesseract_path=tesseract_path)
 
 	@app.route("/", methods=['GET'])
 	def index():
@@ -64,5 +74,6 @@ def run_server(image_url, port):
 
 if __name__ == "__main__":
 	args = parse_args()
-	setup_logging(get_log_level(args.loglevel))
-	run_server(args.url, args.port)
+
+	setup_logging(get_log_level(args.log_level))
+	run_server(args.url, args.port, args.tesseract_path)

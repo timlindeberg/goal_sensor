@@ -14,13 +14,20 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Extract score from an image')
     parser.add_argument('image', type=str, help='The image to extract from')
     parser.add_argument('--save_images', action='store_true', help='If specified, the images are saved')
+    parser.add_argument('--tesseract_path', type=str, default=None, help='Path to the tesseract executable')
     return parser.parse_args()
 
 class ScoreExtractor:
 
-    def __init__(self, save_images=False) -> None:
+    def __init__(self, save_images=False, tesseract_path: str | None=None) -> None:
         """init."""
         self._save_images = save_images
+
+        print(f"tesseract_path {tesseract_path}")
+        if tesseract_path is not None:
+            path = Path(tesseract_path).resolve()
+            _LOGGER.debug("Setting tesseract path to %s", path)
+            pytesseract.pytesseract.tesseract_cmd = path
 
     def get_score(self, image_data):
         img_left, img_middle, img_right = self._get_images(image_data)
@@ -86,7 +93,7 @@ if __name__ == '__main__':
     _LOGGER.addHandler(ch)
     _LOGGER.setLevel(logging.DEBUG)
 
-    score_extractor = ScoreExtractor(args.save_images)
+    score_extractor = ScoreExtractor(args.save_images, args.tesseract_path)
     
     with open(args.image, 'rb') as f:
         data = f.read()

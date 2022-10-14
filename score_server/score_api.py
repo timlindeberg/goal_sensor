@@ -16,18 +16,19 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Extract score from a fetched image')
     parser.add_argument('url', type=str, help='The url where the image should be fetched')
     parser.add_argument('--save_images', action='store_true', help='If specified, the images are saved')
+    parser.add_argument('--tesseract_path', type=str, default=None, help='Path to the tesseract executable')
     return parser.parse_args()
 
 
 class ScoreApi:
     """Score API."""
 
-    def __init__(self, url: str, timeout_seconds: float, save_images: bool) -> None:
+    def __init__(self, url: str, timeout_seconds: float, save_images: bool, tesseract_path: str | None = None) -> None:
         """init."""
         self._url = url
         self._timeout = timeout_seconds
         self._body = '{ "command":"cropped-image" }'
-        self._score_extractor = ScoreExtractor(save_images)
+        self._score_extractor = ScoreExtractor(save_images, tesseract_path)
 
         self._previous_image = ""
         self._previous_score: dict = {}
@@ -76,6 +77,6 @@ if __name__ == '__main__':
     _LOGGER.addHandler(ch)
     _LOGGER.setLevel(logging.DEBUG)
     
-    api = ScoreApi(args.url, 5, args.save_images)
+    api = ScoreApi(args.url, 5, args.save_images, args.tesseract_path)
     scores = api.fetch_score()
     print(f"Scores: {scores}")
