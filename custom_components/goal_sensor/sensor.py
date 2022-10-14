@@ -165,17 +165,18 @@ class GoalSensor(SensorEntity):
         ):
             _LOGGER.debug("Clearing score")
             self._current_score = None
+            return
 
         team_score = self._fetch_team_score()
         if team_score is None:
             return
 
-        # Got a score for our team, enter ACTIVE state
-        if self._current_score is None:
-            _LOGGER.debug("Set current score to %s", team_score)
+        # Enter ACTIVE state when we first get a score or we're back at the
+        # same or a higher score than we've previously seen
+        if self._current_score is None or team_score >= self._current_score:
+            _LOGGER.debug("Entering ACTIVE state")
             self._current_score = team_score
-
-        self._attr_native_value = ACTIVE
+            self._attr_native_value = ACTIVE
 
     def _update_active_state(self) -> None:
         # If we haven't gotten a score in some time (default 20 minutes) set
