@@ -23,7 +23,6 @@ class ScoreExtractor:
         """init."""
         self._save_images = save_images
 
-        print(f"tesseract_path {tesseract_path}")
         if tesseract_path is not None:
             path = Path(tesseract_path).resolve()
             _LOGGER.debug("Setting tesseract path to %s", path)
