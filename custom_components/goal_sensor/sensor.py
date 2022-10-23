@@ -15,10 +15,11 @@ from homeassistant.helpers import config_validation as cv, entity_platform
 from .const import (
     # States
     DISABLED,
+    BACK_OFF,
+    IDLE,
+    NO_SIGNAL,
     ACTIVE,
     GOAL,
-    IDLE,
-    BACK_OFF,
     # Config Values
     SCORE_URL,
     TEAM,
@@ -141,7 +142,9 @@ class GoalSensor(SensorEntity):
 
         if state == BACK_OFF:
             self._update_backoff_state()
-        elif state == IDLE:
+        elif (
+            state == IDLE or state == NO_SIGNAL
+        ):  # Same logic for idle and no_signal states
             self._update_idle_state()
         elif state == ACTIVE:
             self._update_active_state()
@@ -211,14 +214,24 @@ class GoalSensor(SensorEntity):
         )
 
     def _fetch_team_score(self) -> dict:
-        score = self._fetch_score()
-        _LOGGER.debug("Fetched score: '%s'", score)
-        if score is None:
+        result = self._request_score()
+        _LOGGER.debug("Fetched result: '%s'", result)
+
+        if result is None:
             return None
 
         self._back_off = 1
         self._last_update = self._now
 
+        has_signal = result["hasSignal"]
+        if not has_signal:
+            self._attr_native_value = NO_SIGNAL
+            return None
+
+        if self._attr_native_value == NO_SIGNAL:
+            self._attr_native_value = IDLE
+
+        score = result["score"]
         team_score = score.get(self._team, None)
         if team_score is None:
             return None
@@ -227,7 +240,7 @@ class GoalSensor(SensorEntity):
 
         return team_score
 
-    def _fetch_score(self) -> dict:
+    def _request_score(self) -> dict:
         try:
             response = requests.get(
                 self._score_url, timeout=self._score_request_timeout
@@ -243,14 +256,12 @@ class GoalSensor(SensorEntity):
             _LOGGER.warning("Did not get a json response: %s", response.content)
             return None
 
-        if "score" not in response_json:
+        if "score" not in response_json or "hasSignal" not in response_json:
             self._increase_back_off()
-            _LOGGER.error(
-                "Invalid json response, missing 'score' field: %s", response_json
-            )
+            _LOGGER.error("Invalid json response %s", response_json)
             return None
 
-        return response_json["score"]
+        return response_json
 
     def _time_since(self, time):
         return (self._now - time).seconds

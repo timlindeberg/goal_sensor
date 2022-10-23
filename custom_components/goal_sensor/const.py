@@ -11,9 +11,10 @@ MAX_BACKOFF = "max_backoff"
 
 # States
 DISABLED = "disabled"
-IDLE = "idle"
-ACTIVE = "active"
 BACK_OFF = "back_off"
+IDLE = "idle"
+NO_SIGNAL = "no_signal"
+ACTIVE = "active"
 GOAL = "goal"
 
 # Service calls
