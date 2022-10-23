@@ -17,19 +17,20 @@ def parse_args():
     parser.add_argument('url', type=str, help='The url where the image should be fetched')
     parser.add_argument('--save_images', action='store_true', help='If specified, the images are saved')
     parser.add_argument('--tesseract_path', type=str, default=None, help='Path to the tesseract executable')
+    parser.add_argument('--no_signal_image', type=str, default=None, help='Path to a image that is shown when there is no signal')
     return parser.parse_args()
 
 
 class ScoreApi:
     """Score API."""
 
-    def __init__(self, url: str, timeout_seconds: float, save_images: bool, tesseract_path: str | None = None) -> None:
+    def __init__(self, url: str, timeout_seconds: float, score_extractor: ScoreExtractor) -> None:
         """init."""
         self._url = url
         self._timeout = timeout_seconds
-        self._body = '{ "command":"cropped-image" }'
-        self._score_extractor = ScoreExtractor(save_images, tesseract_path)
+        self._score_extractor = score_extractor
 
+        self._body = '{ "command":"cropped-image" }'
         self._previous_image = ""
         self._previous_score: dict = {}
 
@@ -63,6 +64,7 @@ class ScoreApi:
         self._previous_image = image_text
 
         image_data = base64.b64decode(image_text)
+
         score = self._score_extractor.get_score(image_data)
         self._previous_score = score 
         return score
@@ -77,6 +79,7 @@ if __name__ == '__main__':
     _LOGGER.addHandler(ch)
     _LOGGER.setLevel(logging.DEBUG)
     
-    api = ScoreApi(args.url, 5, args.save_images, args.tesseract_path)
+    score_extractor = ScoreExtractor(args.save_images, args.tesseract_path, args.no_signal_image)
+    api = ScoreApi(args.url, 5, score_extractor)
     scores = api.fetch_score()
     print(f"Scores: {scores}")

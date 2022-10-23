@@ -29,7 +29,7 @@ class TestScoreExtractor(unittest.TestCase):
     def _test_image(self, image, expected_score):
         with open(image, 'rb') as f:
             data = f.read()
-        scores = self._score_extractor.get_score(data)
+        scores = self._score_extractor.get_score(data)["score"]
 
         with self.subTest(msg="Checking image", image=str(image)):
             for team, score in expected_score.items():

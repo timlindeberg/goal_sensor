@@ -1,4 +1,6 @@
 from score_api import ScoreApi
+from extract_score import ScoreExtractor
+
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from flask import Flask
@@ -20,6 +22,7 @@ def parse_args():
 	parser.add_argument('--port', type=int, help='The port to run the server at')
 	parser.add_argument('--log_level', choices=['debug', 'info', 'warning', 'error'], type=str, default='info', help='The log level')
 	parser.add_argument('--tesseract_path', type=str, default=None, help='Path to the tesseract executable')
+	parser.add_argument('--no_signal_image', type=str, default=None, help='Path to a image that is shown when there is no signal')
 
 	return parser.parse_args()
 
@@ -53,27 +56,24 @@ def setup_logging(log_level):
 
 	logger.setLevel(log_level)
 
-def run_server(image_url, port, tesseract_path):
-	_LOGGER.info("tesseract_path: %s", tesseract_path)
-
+def run_server(port, score_api):
 	app = Flask(__name__)
-	api = ScoreApi(
-		url=image_url,
-		timeout_seconds=2, 
-		save_images=False, 
-		tesseract_path=tesseract_path)
-
 	@app.route("/", methods=['GET'])
 	def index():
-		score = api.fetch_score()
-		_LOGGER.info("Got request with response: %s", score)
-		return { "score": score }
+		result = score_api.fetch_score()
+		_LOGGER.info("Got request with response: %s", result)
+		return result
 
 	waitress.serve(app, host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":
 	args = parse_args()
-
 	setup_logging(get_log_level(args.log_level))
-	run_server(args.url, args.port, args.tesseract_path)
+
+	save_images = False
+	score_extractor = ScoreExtractor(save_images, args.tesseract_path, args.no_signal_image)
+	timeout = 2
+	api = ScoreApi(args.url, timeout, score_extractor)
+
+	run_server(args.port, api)
