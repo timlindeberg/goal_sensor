@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 import logging
 import requests
+import json
 import voluptuous as vol
 
 from homeassistant.components.sensor import PLATFORM_SCHEMA, SensorEntity
@@ -107,6 +108,7 @@ class GoalSensor(SensorEntity):
         self._last_score = datetime.min
         self._back_off_time = datetime.min
         self._back_off = 1
+        self._last_response = ""
 
     @property
     def extra_state_attributes(self) -> dict[str, str]:
@@ -114,6 +116,7 @@ class GoalSensor(SensorEntity):
         return {
             "back_off": self._back_off,
             "score": self._current_score,
+            "last_response": self._last_response
         }
 
     def enable(self) -> None:
@@ -219,6 +222,8 @@ class GoalSensor(SensorEntity):
 
         if result is None:
             return None
+
+        self._last_response = json.dumps(result)
 
         self._back_off = 1
         self._last_update = self._now
