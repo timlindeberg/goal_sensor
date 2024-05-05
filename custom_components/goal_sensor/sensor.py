@@ -109,6 +109,7 @@ class GoalSensor(SensorEntity):
         self._back_off_time = datetime.min
         self._back_off = 1
         self._last_response = ""
+        self._request_count = 0
 
     @property
     def extra_state_attributes(self) -> dict[str, str]:
@@ -116,6 +117,7 @@ class GoalSensor(SensorEntity):
         return {
             "back_off": self._back_off,
             "score": self._current_score,
+            "request_count": self._request_count,
             "last_response": self._last_response
         }
 
@@ -246,6 +248,7 @@ class GoalSensor(SensorEntity):
         return team_score
 
     def _request_score(self) -> dict:
+        self._request_count += 1
         try:
             response = requests.get(
                 self._score_url, timeout=self._score_request_timeout
