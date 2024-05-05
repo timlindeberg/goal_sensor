@@ -1,5 +1,7 @@
 from score_api import ScoreApi
 from extract_score import ScoreExtractor
+from score_reader import ScoreReader
+from score_readers.score_readers import SCORE_READERS
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -20,6 +22,7 @@ def parse_args():
 	parser = argparse.ArgumentParser(description='Run the score server')
 	parser.add_argument('--url', type=str, help='The url where the image should be fetched')
 	parser.add_argument('--port', type=int, help='The port to run the server at')
+	parser.add_argument('--score_reader', type=str, choices=SCORE_READERS.keys(), help='Which score reader to use')
 	parser.add_argument('--log_level', choices=['debug', 'info', 'warning', 'error'], type=str, default='info', help='The log level')
 	parser.add_argument('--tesseract_path', type=str, default=None, help='Path to the tesseract executable')
 	parser.add_argument('--no_signal_image', type=str, default=None, help='Path to a image that is shown when there is no signal')
@@ -72,7 +75,9 @@ if __name__ == "__main__":
 	setup_logging(get_log_level(args.log_level))
 
 	save_images = False
-	score_extractor = ScoreExtractor(save_images, args.tesseract_path, args.no_signal_image)
+	score_reader = SCORE_READERS[args.score_reader](save_images)
+	score_extractor = ScoreExtractor(score_reader, args.tesseract_path, args.no_signal_image)
+
 	timeout = 2
 	api = ScoreApi(args.url, timeout, score_extractor)
 

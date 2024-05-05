@@ -8,12 +8,16 @@ import requests
 import cv2
 import argparse
 from extract_score import ScoreExtractor
+from score_reader import ScoreReader
+from score_readers.score_readers import SCORE_READERS
 
 _LOGGER = logging.getLogger(__name__)
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Extract score from a fetched image')
     parser.add_argument('url', type=str, help='The url where the image should be fetched')
+    parser.add_argument('--score_reader', type=str, choices=SCORE_READERS.keys(), help='Which score reader to use')
     parser.add_argument('--save_images', action='store_true', help='If specified, the images are saved')
     parser.add_argument('--tesseract_path', type=str, default=None, help='Path to the tesseract executable')
     parser.add_argument('--no_signal_image', type=str, default=None, help='Path to a image that is shown when there is no signal')
@@ -78,7 +82,8 @@ if __name__ == '__main__':
     _LOGGER.addHandler(ch)
     _LOGGER.setLevel(logging.DEBUG)
     
-    score_extractor = ScoreExtractor(args.save_images, args.tesseract_path, args.no_signal_image)
+    score_reader = SCORE_READERS[args.score_reader](args.save_images)
+    score_extractor = ScoreExtractor(score_reader, args.tesseract_path, args.no_signal_image)
     api = ScoreApi(args.url, 5, score_extractor)
     scores = api.fetch_score()
     print(f"Scores: {scores}")

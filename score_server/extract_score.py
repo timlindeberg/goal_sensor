@@ -6,28 +6,19 @@ import pytesseract
 import cv2
 import argparse
 from pathlib import Path
-from score_readers.discovery_2022 import Discovery2022ScoreReader
-from score_readers.discovery_2024 import Discovery2024ScoreReader
 from score_reader import ScoreReader
+from score_readers.score_readers import SCORE_READERS
 
-
-DISCOVERY_2022 = 'discovery2022'
-DISCOVERY_2024 = 'discovery2024'
-
-SCORE_READERS = {
-    DISCOVERY_2022: Discovery2022ScoreReader,
-    DISCOVERY_2024: Discovery2024ScoreReader,
-}
 
 _LOGGER = logging.getLogger(__name__)
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Extract score from an image')
     parser.add_argument('image', type=str, help='The image to extract from')
+    parser.add_argument('--score_reader', type=str, choices=SCORE_READERS.keys(), help='Which score reader to use')
     parser.add_argument('--save_images', action='store_true', help='If specified, the images are saved')
     parser.add_argument('--tesseract_path', type=str, default=None, help='Path to the tesseract executable')
     parser.add_argument('--no_signal_image', type=str, default=None, help='Path to a image that is shown when there is no signal')
-    parser.add_argument('--score_reader', type=str, choices=[DISCOVERY_2022, DISCOVERY_2024], default=DISCOVERY_2024, help='Which score reader to use')
     return parser.parse_args()
 
 class ScoreExtractor:
