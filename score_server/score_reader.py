@@ -1,12 +1,21 @@
-import pytesseract
 import cv2
-import tempfile
+import pytesseract
+import logging
+
 from pathlib import Path
 
+
+_LOGGER = logging.getLogger(__name__)
+
+
 class ScoreReader:
-    def __init__(self, save_images: bool) -> None:
+    def __init__(self, save_images: bool, tesseract_path: str | None) -> None:
         """init."""
         self._save_images = save_images
+        if tesseract_path is not None:
+            path = Path(tesseract_path).resolve()
+            _LOGGER.info("Setting tesseract path to %s", path)
+            pytesseract.pytesseract.tesseract_cmd = path
 
     def _save_image(self, img, name):
         if self._save_images:
@@ -31,4 +40,5 @@ class ScoreReader:
 
 
     def read_score(self, img) -> dict:
+        """Read score."""
         pass

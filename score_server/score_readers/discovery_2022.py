@@ -2,10 +2,11 @@ import cv2
 
 from score_reader import ScoreReader
 
+
 class Discovery2022ScoreReader(ScoreReader):
 
-    def __init__(self, save_images: bool) -> None:
-        super().__init__(save_images)
+    def __init__(self, save_images: bool, tesseract_path: str | None) -> None:
+        super().__init__(save_images, tesseract_path)
 
     def read_score(self, img) -> dict:
         img_left, img_middle, img_right = self._split_image(img)

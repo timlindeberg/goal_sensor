@@ -1,13 +1,16 @@
 import cv2
 import numpy as np
 
-from score_reader import ScoreReader
 from pathlib import Path
+from utils import read_image
+
+from score_reader import ScoreReader
+
 
 class Discovery2024ScoreReader(ScoreReader):
 
-    def __init__(self, save_images: bool) -> None:
-        super().__init__(save_images)
+    def __init__(self, save_images: bool, tesseract_path: str | None) -> None:
+        super().__init__(save_images, tesseract_path)
         self.img_dash = self._read_dash_img()
 
     def read_score(self, img) -> dict:
@@ -76,11 +79,5 @@ class Discovery2024ScoreReader(ScoreReader):
     def _read_dash_img(self):
         current_dir = Path(__file__).parents[0]
         img_dash_path = Path(current_dir, "dash.jpg")
-        with open(img_dash_path, 'rb') as f:
-            img_data = f.read()
-            img = self._image_from_buffer(img_data)
-            return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    def _image_from_buffer(self, image_data):
-        nparr = np.frombuffer(image_data, np.uint8)
-        return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        img = read_image(img_dash_path)
+        return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
