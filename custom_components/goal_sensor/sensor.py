@@ -18,7 +18,6 @@ from .const import (
     DISABLED,
     BACK_OFF,
     IDLE,
-    NO_SIGNAL,
     ACTIVE,
     GOAL,
     # Config Values
@@ -147,9 +146,7 @@ class GoalSensor(SensorEntity):
 
         if state == BACK_OFF:
             self._update_backoff_state()
-        elif (
-            state == IDLE or state == NO_SIGNAL
-        ):  # Same logic for idle and no_signal states
+        elif state == IDLE:
             self._update_idle_state()
         elif state == ACTIVE:
             self._update_active_state()
@@ -219,26 +216,15 @@ class GoalSensor(SensorEntity):
         )
 
     def _fetch_team_score(self) -> dict:
-        result = self._request_score()
-        _LOGGER.debug("Fetched result: '%s'", result)
+        score = self._request_score()
+        _LOGGER.debug("Fetched score: '%s'", score)
 
-        if result is None:
+        if score is None:
             return None
-
-        self._last_response = json.dumps(result)
 
         self._back_off = 1
         self._last_update = self._now
 
-        has_signal = result["hasSignal"]
-        if not has_signal:
-            self._attr_native_value = NO_SIGNAL
-            return None
-
-        if self._attr_native_value == NO_SIGNAL:
-            self._attr_native_value = IDLE
-
-        score = result["score"]
         team_score = score.get(self._team, None)
         if team_score is None:
             return None
@@ -264,12 +250,14 @@ class GoalSensor(SensorEntity):
             _LOGGER.warning("Did not get a json response: %s", response.content)
             return None
 
-        if "score" not in response_json or "hasSignal" not in response_json:
+        self._last_response = response_json
+
+        if "score" not in response_json:
             self._increase_back_off()
             _LOGGER.error("Invalid json response %s", response_json)
             return None
 
-        return response_json
+        return response_json["score"]
 
     def _time_since(self, time):
         return (self._now - time).seconds
