@@ -11,6 +11,7 @@ _LOGGER = logging.getLogger(__name__)
 class ScoreReader:
     def __init__(self, save_images: bool, tesseract_path: str | None) -> None:
         """init."""
+        self._last_pattern = None
         self._save_images = save_images
         if tesseract_path is not None:
             path = Path(tesseract_path).resolve()
@@ -28,9 +29,11 @@ class ScoreReader:
         config = f'--psm {psm}'
         if pattern != None:
             file_path = Path('./score.patterns')
-            with open(file_path, 'w') as f:
-                f.write(f'{pattern}\n\n')
             config += f'  --user-patterns {file_path.resolve()}'
+            if pattern != self._last_pattern
+                with open(file_path, 'w') as f:
+                    f.write(f'{pattern}\n\n')
+                self._last_pattern = pattern
 
         if allowed_chars != None:
             config += f' -c tessedit_char_whitelist={allowed_chars}'
