@@ -18,7 +18,7 @@ On Linux:
 # Example commands
 
 * Running server:
-	`python score_server.py --score_reader discovery2024 --url http://<ip-adress>:8090/json-rpc --port 8642 --no_signal no_signal.jpg`
+	`python score_server.py --score_reader discovery2024 --url http://<ip-adress>:8090/json-rpc --port 8642 --no_signal no_signal.jpg --team_name_timeout 300`
 
 * Executing tests:
 	`python test_extract_score.py`
@@ -37,7 +37,7 @@ After = network.target
 [Service]
 Type = simple
 WorkingDirectory = <dir>/goal_sensor/score_server/
-ExecStart = python3 score_server.py --score_reader discovery2024 --no_signal_image no_signal.jpg --port 8642 --url "http://<ip-adress>:8090/json-rpc"
+ExecStart = python3 score_server.py --score_reader discovery2024 --no_signal_image no_signal.jpg --port 8642 --team_name_timeout 900 --url "http://<ip-adress>:8090/json-rpc"
 User = root
 Group = root
 Restart = on-failure
