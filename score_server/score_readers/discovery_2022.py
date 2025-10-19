@@ -5,17 +5,16 @@ from score_reader import ScoreReader
 
 class Discovery2022ScoreReader(ScoreReader):
 
-    def __init__(self, save_images: bool, tesseract_path: str | None) -> None:
-        super().__init__(save_images, tesseract_path)
+    def __init__(self, save_images: bool, tesseract_path: str | None, team_name_time_out: int | None) -> None:
+        super().__init__(save_images, tesseract_path, team_name_time_out)
 
     def read_score(self, img) -> dict:
         img_left, img_middle, img_right = self._split_image(img)
 
-        team1 = self._read_text(img_left, allowed_chars='ABCDEFGHIJKLMNOPQRSTUVXYZ')
-        team2 = self._read_text(img_right, allowed_chars='ABCDEFGHIJKLMNOPQRSTUVXYZ')
+        self._read_team_names(img_left, img_right)
         score_text = self._read_text(img_middle, allowed_chars='-0123456789')
 
-        if len(team1) == 0 or len(team2) == 0 or len(score_text) == 0:
+        if self._team1 is None or self._team2 is None or len(score_text) == 0:
             return {}
 
         if '-' not in score_text:
@@ -25,7 +24,11 @@ class Discovery2022ScoreReader(ScoreReader):
         if len(scores) != 2:
             return {}
 
-        return {team1: int(scores[0]), team2: int(scores[1])}
+        return {self._team1: int(scores[0]), self._team2: int(scores[1])}
+
+
+    def _parse_team_name(self, img) -> str:
+        return self._read_text(img, allowed_chars='ABCDEFGHIJKLMNOPQRSTUVXYZ')
 
     def _split_image(self, img):
         self._save_image(img, "initial")

@@ -26,7 +26,7 @@ class TestScoreReader(unittest.TestCase):
         self._test_images(Discovery2024ScoreReader, 'test_images/discovery_2024')
 
     def _test_images(self, score_reader_type, path):
-        self._score_reader = score_reader_type(save_images=False, tesseract_path=None)
+        self._score_reader = score_reader_type(save_images=False, tesseract_path=None, team_name_time_out=None)
         for directory in Path(path).glob('*'):
             teams = directory.name.split('_')
 

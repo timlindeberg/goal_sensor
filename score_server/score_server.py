@@ -49,6 +49,7 @@ def parse_args():
 	parser.add_argument('--log_level', choices=['debug', 'info', 'warning', 'error'], type=str, default='info', help='The log level')
 	parser.add_argument('--no_signal_image', type=str, help='Path to a image that is shown when there is no signal')
 	parser.add_argument('--tesseract_path', type=str, default=None, help='Path to the tesseract executable')
+	parser.add_argument('--team_name_timeout', type=int, default=None, help='The time in seconds until the calculated team names should be refreshed')
 
 	return parser.parse_args()
 
@@ -57,7 +58,7 @@ if __name__ == "__main__":
 	setup_logger(log_level=args.log_level, log_to_file=True)
 
 	save_images = False
-	score_reader = SCORE_READERS[args.score_reader](save_images, args.tesseract_path)
+	score_reader = SCORE_READERS[args.score_reader](save_images, args.tesseract_path, args.team_name_timeout)
 	signal_checker = SignalChecker(args.no_signal_image)
 
 	timeout = 2
