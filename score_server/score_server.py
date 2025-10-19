@@ -3,6 +3,7 @@ import sys
 import logging
 import os
 import argparse
+from timeit import default_timer as timer
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from flask import Flask
@@ -16,8 +17,9 @@ from utils import setup_logger
 
 _LOGGER = logging.getLogger(__name__)
 
-def _log_and_return(response):
-	_LOGGER.info("Got request with response: %s", response)
+def _log_and_return(start_time, response):
+	end_time = timer()
+	_LOGGER.info("Got request with response in %.2fms: %s", end_time - start_time, response)
 	return response
 
 
@@ -25,13 +27,15 @@ def run_server(port, score_api):
 	app = Flask(__name__)
 	@app.route("/score", methods=['GET'])
 	def score():
+		start = timer()
 		result = score_api.fetch_score()
-		return _log_and_return({ "score": result })
+		return _log_and_return(start, { "score": result })
 
 	@app.route("/hasSignal", methods=['GET'])
 	def has_signal():
+		start = timer()
 		result = score_api.has_signal()
-		return _log_and_return({ "hasSignal": result })
+		return _log_and_return(start, { "hasSignal": result })
 
 	waitress.serve(app, host="0.0.0.0", port=port)
 
