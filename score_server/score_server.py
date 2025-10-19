@@ -19,7 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 
 def _log_and_return(start_time, response):
 	end_time = timer()
-	_LOGGER.info("Got request with response in %.2fms: %s", end_time - start_time, response)
+	_LOGGER.info("Got request with response in %.2fs: %s", end_time - start_time, response)
 	return response
 
 
