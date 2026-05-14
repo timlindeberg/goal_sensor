@@ -7,10 +7,11 @@ from utils import read_image
 
 from score_readers.discovery_2022 import Discovery2022ScoreReader
 from score_readers.discovery_2024 import Discovery2024ScoreReader
-
+from score_readers.tv4_2026 import TV42026ScoreReader
+from timeit import default_timer as timer
 
 class TestScoreReader(unittest.TestCase):
-    
+
     _team_substitions = {
         'var': ['uar'],
         'vsk': ['usk'],
@@ -25,7 +26,11 @@ class TestScoreReader(unittest.TestCase):
     def test_discovery2024(self):
         self._test_images(Discovery2024ScoreReader, 'test_images/discovery_2024')
 
+    def test_tv42026(self):
+        self._test_images(TV42026ScoreReader, 'test_images/tv4_2026')
+
     def _test_images(self, score_reader_type, path):
+        start = timer()
         self._score_reader = score_reader_type(save_images=False, tesseract_path=None, team_name_time_out=None)
         for directory in Path(path).glob('*'):
             teams = directory.name.split('_')
@@ -34,6 +39,8 @@ class TestScoreReader(unittest.TestCase):
                 score = [int(score) for score in image.stem.split('_')]
                 expected_score = { team: score for (team, score) in zip(teams, score) }
                 self._test_image(image, expected_score)
+        time = timer() - start
+        print(f"Time to run {path}: {time}s")
       
     def _test_image(self, image_path, expected_score):
         image = read_image(image_path)
