@@ -39,9 +39,7 @@ class ScoreApi:
         score = self._score_reader.read_score(img)
 
         if score != self._previous_score:
-            image_data = base64.b64decode(image_text)
-            image_base10 = int.from_bytes(image_data, byteorder='big')
-            _LOGGER.info("Score changed from %s to %s, image (base10): %d", self._previous_score, score, image_base10)
+            _LOGGER.info("Score changed from %s to %s, image (base64): %s", self._previous_score, score, image_text)
 
         self._previous_image = image_text
         self._previous_score = score
