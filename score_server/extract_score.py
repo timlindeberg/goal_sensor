@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     setup_logger()
 
-    score_reader = SCORE_READERS[args.score_reader](args.save_images, args.tesseract_path)
+    score_reader = SCORE_READERS[args.score_reader](args.save_images, args.tesseract_path, 0)
 
     image = read_image(args.image)
 
