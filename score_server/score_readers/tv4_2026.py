@@ -39,7 +39,34 @@ class TV42026ScoreReader(ScoreReader):
         return self._read_text(img, psm=7, allowed_chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ')
 
     def _read_score_digit(self, img) -> str:
-        return self._read_text(img, psm=8, allowed_chars='0123456789')
+        text = self._read_text(img, psm=8, allowed_chars='0123456789')
+        if text.isdigit():
+            return text
+        return self._read_text(self._isolate_digit(img), psm=8, allowed_chars='0123456789')
+
+    def _isolate_digit(self, img):
+        # The score crop also contains parts of the box border and the center logo,
+        # which can confuse tesseract. Keep only the largest dark blob that doesn't
+        # touch the crop edges (the digit) and pad it with white.
+        h, w = img.shape[:2]
+        _, binary = cv2.threshold(img, 128, 255, cv2.THRESH_BINARY_INV)
+        n, _, stats, _ = cv2.connectedComponentsWithStats(binary)
+
+        best = None
+        for i in range(1, n):
+            x, y, cw, ch, area = stats[i]
+            if x == 0 or y == 0 or x + cw >= w or y + ch >= h:
+                continue
+            if best is None or area > stats[best][4]:
+                best = i
+
+        if best is None:
+            return img
+
+        x, y, cw, ch, _ = stats[best]
+        digit = img[y:y + ch, x:x + cw]
+        pad = ch // 4
+        return cv2.copyMakeBorder(digit, pad, pad, pad, pad, cv2.BORDER_CONSTANT, value=255)
 
     def _split_image(self, img):
         self._save_image(img, "initial")

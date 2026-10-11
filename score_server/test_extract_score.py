@@ -18,6 +18,7 @@ class TestScoreReader(unittest.TestCase):
         'vär': ['var', 'uar'],
         'göt': ['got'],
         'dif': ['oif'],
+        'kff': ['kf'],
     }
 
     def test_discovery2022(self):
